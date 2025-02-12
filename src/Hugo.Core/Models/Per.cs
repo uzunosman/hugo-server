@@ -1,17 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace Hugo.Core.Models;
 
 public class Per
 {
-    public int Id { get; set; }
-    public List<Stone> Stones { get; private set; }
+    public int Id { get; }
+    public List<Stone> Stones { get; }
     public PerType Type { get; private set; }
-    public string OwnerId { get; set; }
+    public string OwnerId { get; }
 
     public Per(List<Stone> stones, string ownerId)
     {
+        Id = new Random().Next(1000, 9999);
         Stones = stones;
         OwnerId = ownerId;
         DeterminePerType();
@@ -59,10 +61,26 @@ public class Per
         if (Type == PerType.Invalid)
             return false;
 
-        var tempStones = new List<Stone>(Stones) { stone };
-        var tempPer = new Per(tempStones, OwnerId);
-        
-        return tempPer.Type == Type;
+        if (stone.IsJoker || stone.IsOkey)
+            return true;
+
+        if (Stones.Count == 0)
+            return true;
+
+        var firstStone = Stones.First();
+        return stone.Number == firstStone.Number;
+    }
+
+    public void AddStone(Stone stone)
+    {
+        if (CanAddStone(stone))
+        {
+            Stones.Add(stone);
+        }
+        else
+        {
+            throw new InvalidOperationException("Bu taş bu pere eklenemez.");
+        }
     }
 }
 

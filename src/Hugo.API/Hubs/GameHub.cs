@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Hugo.Core.Models;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace Hugo.API.Hubs;
 
@@ -8,6 +9,12 @@ public class GameHub : Hub
 {
     private static readonly ConcurrentDictionary<string, Game> _games = new();
     private static readonly ConcurrentDictionary<string, string> _userGameMap = new();
+    private readonly ILogger<GameHub> _logger;
+
+    public GameHub(ILogger<GameHub> logger)
+    {
+        _logger = logger;
+    }
 
     public async Task CreateGame(string playerName)
     {
@@ -157,7 +164,7 @@ public class GameHub : Hub
         var player = game.Players.First(p => p.Id == Context.ConnectionId);
         if (player.RemoveStone(stone))
         {
-            per.Stones.Add(stone);
+            per.AddStone(stone);
             await Clients.Group(gameId).SendAsync("StoneAddedToPer", stone, perId, player.Name);
         }
     }
@@ -200,6 +207,44 @@ public class GameHub : Hub
             }
         }
 
+        _logger.LogInformation($"Client disconnected: {Context.ConnectionId}");
         await base.OnDisconnectedAsync(exception);
+    }
+
+    public override async Task OnConnectedAsync()
+    {
+        _logger.LogInformation($"Client connected: {Context.ConnectionId}");
+        await base.OnConnectedAsync();
+    }
+
+    // Oda İşlemleri
+    public async Task JoinRoom(string roomId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Group(roomId).SendAsync("PlayerJoined", Context.ConnectionId);
+    }
+
+    public async Task CreateRoom()
+    {
+        var roomId = Guid.NewGuid().ToString();
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("RoomCreated", roomId);
+    }
+
+    public async Task LeaveRoom(string roomId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Group(roomId).SendAsync("PlayerLeft", Context.ConnectionId);
+    }
+
+    // Oyun İşlemleri
+    public async Task StartGame(string roomId)
+    {
+        await Clients.Group(roomId).SendAsync("GameStarted");
+    }
+
+    public async Task ThrowStone(string roomId, Stone stone)
+    {
+        await Clients.Group(roomId).SendAsync("StoneThrown", Context.ConnectionId, stone);
     }
 } 

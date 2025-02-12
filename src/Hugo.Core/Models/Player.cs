@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Hugo.Core.Models;
 
@@ -45,5 +46,10 @@ public class Player
                 value += 100; // Kullanılmayan okey cezası
         }
         return value;
+    }
+
+    public int GetTotalStoneValue()
+    {
+        return Stones.Sum(s => s.Value);
     }
 } 

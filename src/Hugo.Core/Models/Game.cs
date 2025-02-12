@@ -6,13 +6,13 @@ namespace Hugo.Core.Models;
 
 public class Game
 {
-    public string Id { get; set; }
-    public List<Player> Players { get; private set; }
+    public string Id { get; }
+    public List<Player> Players { get; }
     public List<Stone> Deck { get; private set; }
-    public List<Per> OpenedPers { get; private set; }
-    public Stone OkeyStone { get; set; }
+    public List<Per> OpenedPers { get; }
+    public Stone? OkeyStone { get; private set; }
     public int CurrentTurn { get; private set; }
-    public string CurrentPlayerId { get; private set; }
+    public string? CurrentPlayerId { get; private set; }
     public GameState State { get; private set; }
     public bool IsHugoTurn => CurrentTurn == 1 || CurrentTurn == 5 || CurrentTurn == 9;
 
