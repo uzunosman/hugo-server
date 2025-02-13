@@ -51,7 +51,7 @@ public class Game
     public void StartGame()
     {
         if (Players.Count != 4)
-            throw new InvalidOperationException("Oyun 4 oyuncu ile başlamalıdır.");
+            throw new InvalidOperationException("Oyun 4 oyuncu ile başlatılmalıdır.");
 
         State = GameState.InProgress;
         DealInitialStones();

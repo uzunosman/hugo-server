@@ -216,35 +216,4 @@ public class GameHub : Hub
         _logger.LogInformation($"Client connected: {Context.ConnectionId}");
         await base.OnConnectedAsync();
     }
-
-    // Oda İşlemleri
-    public async Task JoinRoom(string roomId)
-    {
-        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        await Clients.Group(roomId).SendAsync("PlayerJoined", Context.ConnectionId);
-    }
-
-    public async Task CreateRoom()
-    {
-        var roomId = Guid.NewGuid().ToString();
-        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        await Clients.Caller.SendAsync("RoomCreated", roomId);
-    }
-
-    public async Task LeaveRoom(string roomId)
-    {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
-        await Clients.Group(roomId).SendAsync("PlayerLeft", Context.ConnectionId);
-    }
-
-    // Oyun İşlemleri
-    public async Task StartGame(string roomId)
-    {
-        await Clients.Group(roomId).SendAsync("GameStarted");
-    }
-
-    public async Task ThrowStone(string roomId, Stone stone)
-    {
-        await Clients.Group(roomId).SendAsync("StoneThrown", Context.ConnectionId, stone);
-    }
 } 
