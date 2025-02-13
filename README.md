@@ -50,6 +50,21 @@ hugo-server/
 - Minimum 51 değerinde per açma zorunluluğu
 - Detaylı kurallar için [Oyun Kuralları](docs/GAME_RULES.md) dökümanına bakınız
 
+## Son Değişiklikler
+
+### Backend (hugo-server)
+- Oda oluşturma sırasında boş oyuncu ekleme kaldırıldı
+- Oyuncu pozisyonları sıralı ve boşluksuz atanacak şekilde düzeltildi
+- Deste sadece oyun başında bir kez oluşturulup karıştırılacak
+- Hugo ellerinde joker taşları baştan okey olarak işaretlenecek
+- Normal ellerde gösterge taşı desteden çekilecek
+
+### Frontend (hugo-ui)
+- Oyuncu listesi ve sayısı düzeltildi
+- Boş isimli oyuncular filtrelendi
+- Her oyuncu kendi pozisyonunu ve diğer oyuncuları doğru şekilde görecek
+- Oyuncu panelleri ve taş sayıları düzeltildi
+
 ## Katkıda Bulunma
 
 1. Bu repository'yi fork edin

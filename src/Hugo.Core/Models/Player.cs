@@ -10,6 +10,8 @@ public class Player
     public List<Stone> Stones { get; private set; }
     public int Score { get; set; }
     public bool HasOpenedHand { get; set; }
+    public int Position { get; set; } // Masadaki pozisyonu (0-3)
+    public Stone? LastThrownStone { get; set; } // Son attığı taş
 
     public Player(string id, string name)
     {
@@ -18,6 +20,7 @@ public class Player
         Stones = new List<Stone>();
         Score = 0;
         HasOpenedHand = false;
+        Position = -1; // Başlangıçta pozisyon atanmamış
     }
 
     public void AddStone(Stone stone)

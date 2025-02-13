@@ -40,8 +40,19 @@ public class Game
         }
 
         // 2 adet joker taşı
-        Deck.Add(new Stone(0, StoneColor.Black, true));
-        Deck.Add(new Stone(0, StoneColor.Black, true));
+        var joker1 = new Stone(0, StoneColor.Black, true);
+        var joker2 = new Stone(0, StoneColor.Black, true);
+        
+        // Hugo turlarında jokerler okey olur
+        if (IsHugoTurn)
+        {
+            joker1.IsOkey = true;
+            joker2.IsOkey = true;
+            OkeyStone = joker1;
+        }
+        
+        Deck.Add(joker1);
+        Deck.Add(joker2);
 
         // Taşları karıştır
         Random rnd = new Random();
@@ -54,8 +65,21 @@ public class Game
             throw new InvalidOperationException("Oyun 4 oyuncu ile başlatılmalıdır.");
 
         State = GameState.InProgress;
+        
+        // Desteyi oluştur ve karıştır (sadece başlangıçta)
+        Deck.Clear();
+        InitializeDeck();
+        
+        // Okey taşını belirle
+        if (!IsHugoTurn)
+        {
+            DetermineOkeyStone();
+        }
+        
+        // Taşları dağıt
         DealInitialStones();
-        DetermineOkeyStone();
+        
+        // İlk oyuncuyu belirle
         CurrentPlayerId = Players[0].Id;
     }
 
@@ -79,29 +103,16 @@ public class Game
 
     private void DetermineOkeyStone()
     {
-        if (IsHugoTurn)
-        {
-            // Hugo turlarında joker taşları okey olur
-            var jokers = Deck.Where(s => s.IsJoker).ToList();
-            foreach (var joker in jokers)
-            {
-                joker.IsOkey = true;
-            }
-            OkeyStone = jokers.First();
-        }
-        else
-        {
-            // Normal turlarda gösterge taşının bir üstü okey olur
-            var indicator = DrawStone();
-            int okeyNumber = indicator.Number == 13 ? 1 : indicator.Number + 1;
-            OkeyStone = new Stone(okeyNumber, indicator.Color);
+        // Normal turlarda gösterge taşının bir üstü okey olur
+        var indicator = DrawStone();
+        int okeyNumber = indicator.Number == 13 ? 1 : indicator.Number + 1;
+        OkeyStone = new Stone(okeyNumber, indicator.Color);
 
-            // Okey taşlarını işaretle
-            var okeyStones = Deck.Where(s => s.Number == okeyNumber && s.Color == indicator.Color).ToList();
-            foreach (var stone in okeyStones)
-            {
-                stone.IsOkey = true;
-            }
+        // Okey taşlarını işaretle
+        var okeyStones = Deck.Where(s => s.Number == okeyNumber && s.Color == indicator.Color).ToList();
+        foreach (var stone in okeyStones)
+        {
+            stone.IsOkey = true;
         }
     }
 

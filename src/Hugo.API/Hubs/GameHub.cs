@@ -18,14 +18,14 @@ public class GameHub : Hub
 
     public async Task CreateGame(string playerName)
     {
-        var player = new Player(Context.ConnectionId, playerName);
-        var game = new Game(Guid.NewGuid().ToString(), new List<Player> { player });
+        var game = new Game(Guid.NewGuid().ToString(), new List<Player>());
         
         _games.TryAdd(game.Id, game);
         _userGameMap.TryAdd(Context.ConnectionId, game.Id);
         
         await Groups.AddToGroupAsync(Context.ConnectionId, game.Id);
         await Clients.Caller.SendAsync("GameCreated", game.Id);
+        await NotifyGameState(game);
     }
 
     public async Task JoinGame(string gameId, string playerName)
@@ -42,12 +42,16 @@ public class GameHub : Hub
             return;
         }
 
-        var player = new Player(Context.ConnectionId, playerName);
+        var usedPositions = game.Players.Select(p => p.Position).ToList();
+        var position = Enumerable.Range(0, 4).First(i => !usedPositions.Contains(i));
+
+        var player = new Player(Context.ConnectionId, playerName) { Position = position };
         game.Players.Add(player);
         _userGameMap.TryAdd(Context.ConnectionId, gameId);
         
         await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
-        await Clients.Group(gameId).SendAsync("PlayerJoined", player);
+        await Clients.Group(gameId).SendAsync("PlayerJoined", new { player.Name, Position = position });
+        await NotifyGameState(game);
 
         if (game.Players.Count == 4)
         {
@@ -104,8 +108,9 @@ public class GameHub : Hub
         var player = game.Players.First(p => p.Id == Context.ConnectionId);
         if (player.RemoveStone(stone))
         {
+            player.LastThrownStone = stone;
             game.NextTurn();
-            await Clients.Group(gameId).SendAsync("StoneThrown", stone, player.Name);
+            await Clients.Group(gameId).SendAsync("StoneThrown", stone, player.Name, player.Position);
             await NotifyGameState(game);
         }
     }
@@ -169,20 +174,61 @@ public class GameHub : Hub
         }
     }
 
+    public async Task StartGame(string gameId)
+    {
+        if (!_games.TryGetValue(gameId, out var game))
+        {
+            await Clients.Caller.SendAsync("Error", "Oyun bulunamadı.");
+            return;
+        }
+
+        var player = game.Players.FirstOrDefault(p => p.Id == Context.ConnectionId);
+        if (player == null || player.Position != 0)
+        {
+            await Clients.Caller.SendAsync("Error", "Oyunu sadece ilk oyuncu başlatabilir.");
+            return;
+        }
+
+        if (game.Players.Count != 4)
+        {
+            await Clients.Caller.SendAsync("Error", "Oyun 4 oyuncu ile başlatılmalıdır.");
+            return;
+        }
+
+        game.StartGame();
+        await Clients.Group(gameId).SendAsync("GameStarted");
+        await NotifyGameState(game);
+    }
+
     private async Task NotifyGameState(Game game)
     {
-        foreach (var player in game.Players)
+        // Boş isimli oyuncuları filtrele
+        var validPlayers = game.Players.Where(p => !string.IsNullOrWhiteSpace(p.Name)).ToList();
+
+        foreach (var player in validPlayers)
         {
+            var otherPlayers = validPlayers
+                .Where(p => p.Id != player.Id)
+                .OrderBy(p => p.Position)
+                .Select(p => new {
+                    p.Name,
+                    p.Position,
+                    StoneCount = p.Stones.Count,
+                    LastThrownStone = p.LastThrownStone
+                })
+                .ToList();
+
             var playerState = new
             {
+                Position = player.Position,
                 CurrentPlayer = game.CurrentPlayerId == player.Id,
                 YourStones = player.Stones,
-                OtherPlayers = game.Players.Where(p => p.Id != player.Id)
-                    .Select(p => new { p.Name, StoneCount = p.Stones.Count }),
+                OtherPlayers = otherPlayers,
                 OpenedPers = game.OpenedPers,
                 OkeyStone = game.OkeyStone,
                 CurrentTurn = game.CurrentTurn,
-                IsHugoTurn = game.IsHugoTurn
+                IsHugoTurn = game.IsHugoTurn,
+                TotalPlayers = validPlayers.Count // Sadece geçerli oyuncuları say
             };
 
             await Clients.Client(player.Id).SendAsync("GameStateUpdated", playerState);
