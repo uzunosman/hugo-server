@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Hugo.API.Hubs;
 using Hugo.Infrastructure;
 using Microsoft.AspNetCore.Builder;
+using Hugo.Core.Services;
 
 namespace Hugo.API
 {
@@ -21,6 +22,7 @@ namespace Hugo.API
             // Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddSignalR();
+            builder.Services.AddSingleton<IGameService, GameService>();
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(builder =>

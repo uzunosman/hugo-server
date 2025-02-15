@@ -1,13 +1,45 @@
-# Hugo Game Server
+# Hugo Oyunu - Backend
 
-Bu proje, Hugo taş oyununun çevrimiçi çok oyunculu versiyonu için backend sunucusudur.
+Hugo, Türk okey oyununun modern bir versiyonudur. Bu repository, oyunun backend kısmını içerir ve .NET 8 kullanılarak geliştirilmiştir.
 
-## Teknolojiler
+## Özellikler
 
-- .NET 8
+- SignalR ile real-time iletişim
+- Oyun odası yönetimi
+- Taş dağıtma ve karıştırma
+- Okey ve gösterge taşı belirleme
+- Oyun durumu yönetimi
+
+## Kurulum
+
+```bash
+# Projeyi derle
+dotnet build
+
+# Uygulamayı çalıştır
+dotnet run --project src/Hugo.API
+
+# Test'leri çalıştır
+dotnet test
+```
+
+## Geliştirme
+
+Proje .NET 8 ile geliştirilmiştir ve aşağıdaki teknolojileri kullanır:
 - ASP.NET Core
-- SignalR (gerçek zamanlı iletişim)
-- Redis (oyun durumu yönetimi)
+- SignalR
+- Entity Framework Core (opsiyonel)
+
+## API Endpoints
+
+- `/gameHub`: SignalR hub endpoint'i
+- Tüm oyun iletişimi WebSocket üzerinden yapılır
+
+## Notlar
+
+- Oyun 4 oyuncu ile oynanır
+- Her oyuncuya başlangıçta 14-15 taş dağıtılır
+- Gösterge ve okey taşı otomatik belirlenir
 
 ## Proje Yapısı
 
@@ -19,26 +51,6 @@ hugo-server/
 │   └── Hugo.Infrastructure/ # Veritabanı, cache vb.
 └── tests/                   # Unit ve Integration testler
 ```
-
-## Kurulum
-
-1. .NET 8 SDK'yı yükleyin
-2. Projeyi klonlayın:
-   ```bash
-   git clone https://github.com/uzunosman/hugo-serveer.git
-   ```
-3. Proje dizinine gidin:
-   ```bash
-   cd hugo-serveer
-   ```
-4. Bağımlılıkları yükleyin:
-   ```bash
-   dotnet restore
-   ```
-5. Projeyi çalıştırın:
-   ```bash
-   dotnet run --project src/Hugo.API
-   ```
 
 ## Oyun Kuralları
 

@@ -24,7 +24,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             text-align: center;
-            max-width: 400px;
+            max-width: 600px;
             width: 100%;
         }
 
@@ -40,15 +40,48 @@
             display: block;
         }
 
-        .game-link {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 4px;
-            word-break: break-all;
+        .player-inputs {
+            display: none;
+            margin-top: 20px;
         }
 
-        button {
+        .player-inputs.visible {
+            display: block;
+        }
+
+        .player-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .player-row input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+            margin-right: 10px;
+        }
+
+        .join-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .join-button:hover {
+            background-color: #45a049;
+        }
+
+        .create-button {
             background-color: #2196f3;
             color: white;
             border: none;
@@ -59,7 +92,7 @@
             transition: background-color 0.3s;
         }
 
-        button:hover {
+        .create-button:hover {
             background-color: #1976d2;
         }
 
@@ -79,47 +112,132 @@
 <body>
     <div class="container">
         <h1>Hugo Oyunu</h1>
-        <p>Yeni bir oyun odası oluşturun ve ID'yi oyunculara gönderin.</p>
+        <p>Yeni bir oyun odası oluşturun ve oyuncuları davet edin.</p>
 
-        <button onclick="createRoom()">Yeni Oda Oluştur</button>
+        <button class="create-button" onclick="createRoom()">Yeni Oda Oluştur</button>
 
         <div id="roomInfo" class="room-info">
             <h2>Oda Bilgileri</h2>
             <p>Oda ID: <strong id="roomId"></strong></p>
-            <p>Oyuncular oyuna katılmak için bu linki kullanabilir:</p>
-            <div class="game-link" id="gameLink"></div>
+        </div>
+
+        <div id="playerInputs" class="player-inputs">
+            <div class="player-row">
+                <input type="text" id="player1" value="1. Oyuncu" />
+                <button class="join-button" onclick="joinGame(0)">Giriş Yap</button>
+            </div>
+            <div class="player-row">
+                <input type="text" id="player2" value="2. Oyuncu" />
+                <button class="join-button" onclick="joinGame(1)">Giriş Yap</button>
+            </div>
+            <div class="player-row">
+                <input type="text" id="player3" value="3. Oyuncu" />
+                <button class="join-button" onclick="joinGame(2)">Giriş Yap</button>
+            </div>
+            <div class="player-row">
+                <input type="text" id="player4" value="4. Oyuncu" />
+                <button class="join-button" onclick="joinGame(3)">Giriş Yap</button>
+            </div>
         </div>
 
         <div id="log"></div>
     </div>
 
     <script>
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/gameHub")
-            .build();
+        let currentRoomId = '';
+        let connection = null;
+        let connectionRetries = 0;
+        const maxConnectionRetries = 3;
 
-        connection.on("GameCreated", (gameId) => {
-            document.getElementById('roomInfo').classList.add('visible');
-            document.getElementById('roomId').textContent = gameId;
-            const gameLink = `http://localhost:5173?roomId=${gameId}`;
-            document.getElementById('gameLink').textContent = gameLink;
-            log(`Oda oluşturuldu. ID: ${gameId}`);
-        });
+        async function initializeConnection() {
+            if (connection) {
+                try {
+                    await connection.stop();
+                } catch (err) {
+                    console.error('Bağlantı kapatma hatası:', err);
+                }
+            }
 
-        connection.on("PlayerJoined", (player) => {
-            log(`${player.name} odaya katıldı`);
-        });
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/gameHub")  // localhost:5000'deki hub'a bağlan
+                .withAutomaticReconnect([0, 2000, 5000, 10000, null])
+                .build();
 
-        connection.on("Error", (message) => {
-            log(`Hata: ${message}`);
-        });
+            setupEventHandlers();
+
+            try {
+                await connection.start();
+                log("Bağlantı kuruldu");
+                connectionRetries = 0;
+            } catch (err) {
+                connectionRetries++;
+                log(`Bağlantı hatası: ${err.message}`);
+
+                if (connectionRetries <= maxConnectionRetries) {
+                    log(`Yeniden bağlanılıyor... (Deneme ${connectionRetries}/${maxConnectionRetries})`);
+                    setTimeout(initializeConnection, 3000);
+                } else {
+                    log("Maksimum bağlantı deneme sayısına ulaşıldı. Lütfen sayfayı yenileyip tekrar deneyin.");
+                }
+            }
+        }
+
+        function setupEventHandlers() {
+            connection.on("GameCreated", (gameId) => {
+                currentRoomId = gameId;
+                document.getElementById('roomInfo').classList.add('visible');
+                document.getElementById('playerInputs').classList.add('visible');
+                document.getElementById('roomId').textContent = gameId;
+                log(`Oda oluşturuldu. ID: ${gameId}`);
+            });
+
+            connection.on("PlayerJoined", (player) => {
+                log(`${player.name} odaya katıldı`);
+            });
+
+            connection.on("Error", (message) => {
+                log(`Hata: ${message}`);
+            });
+        }
 
         async function createRoom() {
+            if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+                log("Bağlantı kurulamadı. Lütfen sayfayı yenileyip tekrar deneyin.");
+                return;
+            }
+
             try {
                 await connection.invoke("CreateGame", "");
             } catch (err) {
-                log(err);
+                log(`Oda oluşturma hatası: ${err.message}`);
             }
+        }
+
+        function joinGame(playerIndex) {
+            const playerInput = document.getElementById(`player${playerIndex + 1}`);
+            const playerName = playerInput.value.trim();
+
+            if (!playerName) {
+                log("Lütfen oyuncu adını girin!");
+                return;
+            }
+
+            if (!currentRoomId) {
+                log("Lütfen önce bir oda oluşturun!");
+                return;
+            }
+
+            // Oyun URL'sini oluştur ve yeni sekmede aç
+            const gameUrl = `http://localhost:5173?roomId=${currentRoomId}&name=${encodeURIComponent(playerName)}&position=${playerIndex}`;
+            window.open(gameUrl, '_blank');
+
+            // Butonu devre dışı bırak
+            const button = document.getElementById(`player${playerIndex + 1}`).nextElementSibling;
+            button.disabled = true;
+            button.textContent = "Giriş Yapıldı";
+            button.style.backgroundColor = "#ccc";
+
+            log(`${playerName} için oyun ekranı açıldı`);
         }
 
         function log(message) {
@@ -127,9 +245,8 @@
             logElement.innerHTML = `${new Date().toLocaleTimeString('tr-TR')}: ${message}<br>${logElement.innerHTML}`;
         }
 
-        connection.start()
-            .then(() => log("Bağlantı kuruldu"))
-            .catch(err => log(err));
+        // Sayfa yüklendiğinde bağlantıyı başlat
+        initializeConnection();
     </script>
 </body>
 

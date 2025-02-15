@@ -13,7 +13,7 @@ public class Game
     public Stone? OkeyStone { get; private set; }
     public int CurrentTurn { get; private set; }
     public string? CurrentPlayerId { get; private set; }
-    public GameState State { get; private set; }
+    public GameStatus Status { get; private set; }
     public bool IsHugoTurn => CurrentTurn == 1 || CurrentTurn == 5 || CurrentTurn == 9;
 
     public Game(string id, List<Player> players)
@@ -23,7 +23,7 @@ public class Game
         Deck = new List<Stone>();
         OpenedPers = new List<Per>();
         CurrentTurn = 1;
-        State = GameState.WaitingToStart;
+        Status = GameStatus.WaitingToStart;
         InitializeDeck();
     }
 
@@ -64,7 +64,7 @@ public class Game
         if (Players.Count != 4)
             throw new InvalidOperationException("Oyun 4 oyuncu ile başlatılmalıdır.");
 
-        State = GameState.InProgress;
+        Status = GameStatus.InProgress;
         
         // Desteyi oluştur ve karıştır (sadece başlangıçta)
         Deck.Clear();
@@ -144,7 +144,7 @@ public class Game
 
     private void EndGame()
     {
-        State = GameState.Finished;
+        Status = GameStatus.Finished;
         // Final puanlarını hesapla
         foreach (var player in Players)
         {
@@ -154,9 +154,36 @@ public class Game
                 player.Score += player.CalculateHandValue();
         }
     }
+
+    public void Start(Dictionary<string, List<Stone>> playerStones, Stone indicatorStone, Stone okeyStone, List<Stone> remainingStones)
+    {
+        if (Status != GameStatus.WaitingToStart)
+            throw new InvalidOperationException("Oyun zaten başlatılmış.");
+
+        // Oyunculara taşlarını dağıt
+        foreach (var player in Players)
+        {
+            if (playerStones.TryGetValue(player.Id, out var stones))
+            {
+                player.Stones.Clear();
+                player.Stones.AddRange(stones);
+            }
+        }
+
+        // Okey taşını ayarla
+        OkeyStone = okeyStone;
+        
+        // Desteyi güncelle
+        Deck = remainingStones;
+        
+        // Oyunu başlat
+        Status = GameStatus.InProgress;
+        CurrentTurn = 1;
+        CurrentPlayerId = Players[0].Id;
+    }
 }
 
-public enum GameState
+public enum GameStatus
 {
     WaitingToStart,
     InProgress,
